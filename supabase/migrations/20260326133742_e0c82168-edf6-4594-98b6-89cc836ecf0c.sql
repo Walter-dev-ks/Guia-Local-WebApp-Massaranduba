@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS notifications_last_seen timestamp with time zone NOT NULL DEFAULT '1970-01-01T00:00:00Z';
