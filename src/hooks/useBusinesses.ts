@@ -34,24 +34,22 @@ export function useBusinessById(id: string) {
 
 export function useBusinessesByCategory(categorySlug: string) {
   return useQuery({
-        // Busca Inteligente (Full Text Search)
+      // Busca Inteligente (Full Text Search)
       if (searchTerm) {
-        // Busca simultânea em Nome, Categoria e Descrição
-        // 'portuguese' ignora acentos e entende plurais
+        // Busca simultânea em Nome e Descrição
         query = query.textSearch('fts', searchTerm, {
           config: 'portuguese',
           type: 'plain'
         });
       } else {
-        // Filtros normais quando não há busca por texto
+        // Filtros normais (Aqui mantemos a lógica original de IDs)
         if (category) {
-          query = query.eq('category', category);
+          query = query.eq('category_id', category); // Verifique se o campo é category_id
         }
         if (subcategory) {
-          query = query.eq('subcategory', subcategory);
+          query = query.eq('subcategory_id', subcategory); // Verifique se o campo é subcategory_id
         }
       }
-
       return data;
     },
     enabled: !!categorySlug,
