@@ -34,20 +34,17 @@ export function useBusinessById(id: string) {
 
 export function useBusinessesByCategory(categorySlug: string) {
   return useQuery({
-      // Busca Inteligente (Full Text Search)
       if (searchTerm) {
-        // Busca simultânea em Nome e Descrição
-        query = query.textSearch('fts', searchTerm, {
-          config: 'portuguese',
-          type: 'plain'
-        });
+        // Criamos uma busca que tenta encontrar o termo no Nome OU na Descrição
+        // O ilike com % antes e depois já ajuda muito na correspondência parcial
+        query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
       } else {
-        // Filtros normais (Aqui mantemos a lógica original de IDs)
+        // Filtros normais por ID
         if (category) {
-          query = query.eq('category_id', category); // Verifique se o campo é category_id
+          query = query.eq('category_id', category);
         }
         if (subcategory) {
-          query = query.eq('subcategory_id', subcategory); // Verifique se o campo é subcategory_id
+          query = query.eq('subcategory_id', subcategory);
         }
       }
       return data;
