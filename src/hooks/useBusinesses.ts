@@ -34,15 +34,24 @@ export function useBusinessById(id: string) {
 
 export function useBusinessesByCategory(categorySlug: string) {
   return useQuery({
-    queryKey: ['businesses', 'category', categorySlug],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('businesses')
-        .select('*, categories!inner(name, slug, icon), subcategories(name, slug)')
-        .eq('categories.slug', categorySlug)
-        .eq('active', true)
-        .order('trade_name');
-      if (error) throw error;
+        // Busca Inteligente (Full Text Search)
+      if (searchTerm) {
+        // Busca simultânea em Nome, Categoria e Descrição
+        // 'portuguese' ignora acentos e entende plurais
+        query = query.textSearch('fts', searchTerm, {
+          config: 'portuguese',
+          type: 'plain'
+        });
+      } else {
+        // Filtros normais quando não há busca por texto
+        if (category) {
+          query = query.eq('category', category);
+        }
+        if (subcategory) {
+          query = query.eq('subcategory', subcategory);
+        }
+      }
+
       return data;
     },
     enabled: !!categorySlug,
