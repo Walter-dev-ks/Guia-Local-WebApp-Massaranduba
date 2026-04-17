@@ -2,6 +2,29 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+async function ensureProfileExists(user: User | null) {
+  if (!user) return;
+
+  const fullName =
+    user.user_metadata?.full_name ??
+    user.user_metadata?.name ??
+    user.email ??
+    'Usuário';
+
+  const profileData: { id: string; full_name?: string } = { id: user.id };
+  if (fullName) {
+    profileData.full_name = fullName;
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .upsert(profileData, { onConflict: 'id' });
+
+  if (error) {
+    console.error('Erro ao criar ou atualizar o perfil do usuário:', error);
+  }
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -33,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
 
         if (session?.user) {
+          await ensureProfileExists(session.user);
           const { data } = await supabase
             .from('user_roles')
             .select('role')
@@ -47,10 +71,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
+        await ensureProfileExists(session.user);
         supabase
           .from('user_roles')
           .select('role')

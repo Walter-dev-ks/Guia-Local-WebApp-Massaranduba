@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Megaphone, Tag, Star, CheckCircle2, MessageCircle, ThumbsUp, ThumbsDown, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getStorageUrl, isBusinessOpenFromHours } from '@/lib/supabase-helpers';
+import { getStorageUrl, isBusinessOpenFromHours, getBusinessStatusText, type SpecialHours } from '@/lib/supabase-helpers';
 import { StarRating } from '@/components/StarRating';
 import { usePostReactions } from '@/hooks/usePostReactions';
 import { useAuth } from '@/contexts/AuthContext';
@@ -26,6 +26,7 @@ interface FeedPostData {
     cover_photo: string | null;
     whatsapp?: string | null;
     hours?: any;
+    special_hours?: SpecialHours;
     rating?: number;
     review_count?: number;
   } | null;
@@ -100,7 +101,8 @@ export function FeedCard({ post, index }: FeedCardProps) {
   };
   // ---------------------------
 
-  const isOpen = business?.hours ? isBusinessOpenFromHours(business.hours as WeeklyHours) : null;
+  const isOpen = business?.hours ? isBusinessOpenFromHours(business.hours as WeeklyHours, business.special_hours) : null;
+  const statusText = business?.hours ? getBusinessStatusText(business.hours as WeeklyHours, business.special_hours) : 'Aberto';
 
   const handleReaction = (e: React.MouseEvent, reaction: 'like' | 'dislike') => {
     e.stopPropagation();
@@ -159,7 +161,7 @@ export function FeedCard({ post, index }: FeedCardProps) {
                 {isOpen !== null && (
                   <span className={`inline-flex items-center gap-1 text-xs font-medium ${isOpen ? 'text-status-open' : 'text-status-closed'}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${isOpen ? 'bg-status-open' : 'bg-status-closed'}`} />
-                    {isOpen ? 'Aberto' : 'Fechado'}
+                    {statusText}
                   </span>
                 )}
               </div>

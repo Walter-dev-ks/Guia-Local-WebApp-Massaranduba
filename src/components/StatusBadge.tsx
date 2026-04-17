@@ -1,13 +1,15 @@
 import { WeeklyHours } from '@/types';
-import { isBusinessOpenFromHours } from '@/lib/supabase-helpers';
+import { isBusinessOpenFromHours, getBusinessStatusText, type SpecialHours } from '@/lib/supabase-helpers';
 
 interface StatusBadgeProps {
   hours: WeeklyHours | any;
+  specialHours?: SpecialHours;
   size?: 'sm' | 'md';
 }
 
-export function StatusBadge({ hours, size = 'md' }: StatusBadgeProps) {
-  const open = isBusinessOpenFromHours(hours as WeeklyHours);
+export function StatusBadge({ hours, specialHours, size = 'md' }: StatusBadgeProps) {
+  const open = isBusinessOpenFromHours(hours as WeeklyHours, specialHours);
+  const statusText = getBusinessStatusText(hours as WeeklyHours, specialHours);
 
   return (
     <span
@@ -20,7 +22,7 @@ export function StatusBadge({ hours, size = 'md' }: StatusBadgeProps) {
       }`}
     >
       <span className={`rounded-full ${size === 'sm' ? 'w-1.5 h-1.5' : 'w-2 h-2'} ${open ? 'bg-status-open' : 'bg-status-closed'}`} />
-      {open ? 'Aberto' : 'Fechado'}
+      {statusText}
     </span>
   );
 }

@@ -41,7 +41,7 @@ export function UserProfileCard() {
         .from('profiles')
         .select('full_name, avatar_url, reviewer_badge, review_count')
         .eq('id', user!.id)
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data;
     },

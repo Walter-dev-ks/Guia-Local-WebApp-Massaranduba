@@ -10,6 +10,7 @@ import { useEffect } from 'react';
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
+  const [localLastSeen, setLocalLastSeen] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -28,7 +29,7 @@ export function NotificationBell() {
     enabled: !!user,
   });
 
-  const lastSeen = profile?.notifications_last_seen || new Date(0).toISOString();
+  const lastSeen = localLastSeen || profile?.notifications_last_seen || new Date(0).toISOString();
 
   const { data: posts } = useQuery({
     queryKey: ['notification-posts'],
@@ -37,7 +38,7 @@ export function NotificationBell() {
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       const { data, error } = await supabase
         .from('feed_posts')
-        .select('id, title, type, created_at, businesses(trade_name)')
+        .select('id, title, type, created_at, business_id, businesses(id, trade_name)')
         .eq('active', true)
         .gte('created_at', sevenDaysAgo.toISOString())
         .order('created_at', { ascending: false })
@@ -48,7 +49,7 @@ export function NotificationBell() {
     refetchInterval: 60000,
   });
 
-  const unreadCount = posts?.filter(p => p.created_at > lastSeen).length || 0;
+  const unreadCount = posts?.filter(p => Date.parse(p.created_at) > Date.parse(lastSeen)).length || 0;
 
   // Request notification permission on mount
   useEffect(() => {
@@ -78,16 +79,29 @@ export function NotificationBell() {
 
   const markAllRead = useMutation({
     mutationFn: async () => {
-      if (!user || !posts?.length) return;
-      const { error } = await supabase
+      if (!user || !posts?.length) return null;
+      const latestPostTimestamp = Date.parse(posts[0].created_at);
+      const nowTimestamp = Date.now();
+      const timestamp = new Date(Math.max(latestPostTimestamp, nowTimestamp)).toISOString();
+      const { data, error } = await supabase
         .from('profiles')
-        .update({ notifications_last_seen: posts[0].created_at })
-        .eq('id', user.id);
+        .upsert({ id: user.id, notifications_last_seen: timestamp }, { onConflict: 'id' })
+        .select('notifications_last_seen')
+        .maybeSingle();
       if (error) throw error;
+      return data?.notifications_last_seen || timestamp;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profile-notifications'] });
+    onSuccess: (timestamp) => {
+      if (timestamp) {
+        setLocalLastSeen(timestamp);
+        queryClient.setQueryData(['profile-notifications', user?.id], { notifications_last_seen: timestamp });
+      }
+      queryClient.invalidateQueries({ queryKey: ['profile-notifications', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['notification-posts'] });
       setOpen(false);
+    },
+    onError: (error) => {
+      console.error('Erro ao marcar notificações como lidas:', error);
     },
   });
 
@@ -120,10 +134,13 @@ export function NotificationBell() {
           ) : (
             posts.map((post) => {
               const isUnread = post.created_at > lastSeen;
+              const businessId = post.business_id || (post.businesses as any)?.id;
+              const businessName = (post.businesses as any)?.trade_name || 'Estabelecimento';
+              
               return (
                 <Link
                   key={post.id}
-                  to={`/?post=${post.id}`}
+                  to={businessId ? `/empresa/${businessId}?tab=posts` : '#'}
                   onClick={() => setOpen(false)}
                   className={`block px-4 py-3 hover:bg-muted transition-colors border-b border-border/50 last:border-0 ${isUnread ? 'bg-primary/5' : ''}`}
                 >
@@ -132,7 +149,7 @@ export function NotificationBell() {
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{post.title}</p>
                       <p className="text-xs text-muted-foreground">
-                        {(post.businesses as any)?.trade_name} • {new Date(post.created_at).toLocaleDateString('pt-BR')}
+                        {businessName} • {new Date(post.created_at).toLocaleDateString('pt-BR')}
                       </p>
                     </div>
                   </div>

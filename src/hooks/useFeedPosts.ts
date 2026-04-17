@@ -13,7 +13,7 @@ export function useFeedPosts() {
       const now = new Date().toISOString();
       const { data, error } = await supabase
         .from('feed_posts')
-        .select('*, businesses(id, trade_name, verified, cover_photo, hours, rating, review_count, whatsapp)')
+        .select('*, businesses(id, trade_name, verified, cover_photo, hours, special_hours, rating, review_count, whatsapp)')
         .eq('active', true)
         .or(`expires_at.is.null,expires_at.gt.${now}`)
         .order('created_at', { ascending: false });

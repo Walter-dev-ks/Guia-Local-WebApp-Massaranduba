@@ -9,16 +9,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Plus, AlertTriangle, CheckCircle2, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { SpecialHoursManager } from '@/components/SpecialHoursManager';
+import { useUpdateBusinessSpecialHours } from '@/hooks/useUpdateBusinessSpecialHours';
+import type { SpecialHours } from '@/lib/supabase-helpers';
 
 export default function AdminCRM() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [hoursOpen, setHoursOpen] = useState(false);
   const [selectedBiz, setSelectedBiz] = useState<any>(null);
+  const [editingHours, setEditingHours] = useState<SpecialHours>({});
+  const [specialHoursSupported, setSpecialHoursSupported] = useState(true);
   const [form, setForm] = useState({ notes: '', contact_method: 'phone', data_confirmed: true, changes_made: '' });
+  const updateSpecialHours = useUpdateBusinessSpecialHours();
 
   const { data: businesses, isLoading } = useQuery({
     queryKey: ['admin-crm-businesses'],
@@ -31,6 +38,24 @@ export default function AdminCRM() {
       return data;
     },
   });
+
+  const fetchSpecialHours = async (bizId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('businesses')
+        .select('special_hours')
+        .eq('id', bizId)
+        .maybeSingle();
+      if (error) throw error;
+      setSpecialHoursSupported(true);
+      return data?.special_hours || {};
+    } catch (error: any) {
+      console.error('Erro ao carregar horários especiais:', error);
+      setSpecialHoursSupported(false);
+      toast.error('Não foi possível carregar horários especiais. Verifique se a coluna special_hours existe no banco.');
+      return {} as SpecialHours;
+    }
+  };
 
   const verifyMutation = useMutation({
     mutationFn: async () => {
@@ -70,6 +95,34 @@ export default function AdminCRM() {
   const openVerify = (biz: any) => {
     setSelectedBiz(biz);
     setOpen(true);
+  };
+
+  const openEditHours = async (biz: any) => {
+    setSelectedBiz(biz);
+    setHoursOpen(true);
+    const hours = await fetchSpecialHours(biz.id);
+    setEditingHours(hours);
+  };
+
+  const handleSaveHours = async () => {
+    if (!selectedBiz) return;
+    if (!specialHoursSupported) {
+      toast.error('Horários especiais não estão disponíveis no banco de dados.');
+      return;
+    }
+
+    try {
+      await updateSpecialHours.mutateAsync({
+        businessId: selectedBiz.id,
+        specialHours: editingHours,
+      });
+      setHoursOpen(false);
+      setSelectedBiz(null);
+      setEditingHours({});
+    } catch (e) {
+      console.error('Erro ao salvar horários:', e);
+      toast.error('Erro ao salvar horários especiais.');
+    }
   };
 
   return (
@@ -117,6 +170,31 @@ export default function AdminCRM() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={hoursOpen} onOpenChange={v => { setHoursOpen(v); if (!v) { setSelectedBiz(null); setEditingHours({}); setSpecialHoursSupported(true); } }}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar size={20} /> Horários Especiais - {selectedBiz?.trade_name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {!specialHoursSupported ? (
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+                Horários especiais não estão disponíveis neste banco de dados. Verifique se a coluna <code>special_hours</code> existe na tabela <code>businesses</code>.
+              </div>
+            ) : (
+              <SpecialHoursManager
+                specialHours={editingHours}
+                onChange={setEditingHours}
+              />
+            )}
+            <Button onClick={handleSaveHours} className="w-full" disabled={updateSpecialHours.isPending || !specialHoursSupported}>
+              {updateSpecialHours.isPending ? 'Salvando...' : 'Salvar Horários Especiais'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         <Table>
           <TableHeader>
@@ -125,7 +203,7 @@ export default function AdminCRM() {
               <TableHead>Telefone</TableHead>
               <TableHead>Última Verificação</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="w-24">Ação</TableHead>
+              <TableHead className="w-32">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -158,9 +236,14 @@ export default function AdminCRM() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Button size="sm" variant="outline" onClick={() => openVerify(biz)}>
-                        Verificar
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => openVerify(biz)}>
+                          Verificar
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => openEditHours(biz)} className="gap-1">
+                          <Calendar size={14} /> Horários
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );

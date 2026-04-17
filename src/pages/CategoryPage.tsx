@@ -20,7 +20,7 @@ const CategoryPage = () => {
   
   // Filtrar apenas estabelecimentos abertos agora se o filtro estiver ativo
   if (isOpenNowOnly && businesses) {
-    businesses = businesses.filter((biz: any) => isBusinessOpenFromHours(biz.hours));
+    businesses = businesses.filter((biz: any) => isBusinessOpenFromHours(biz.hours, biz.special_hours));
   }
   
   const isLoading = catLoading || bizLoading;

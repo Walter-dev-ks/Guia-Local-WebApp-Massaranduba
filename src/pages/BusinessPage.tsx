@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -8,7 +8,7 @@ import { useBusinessById } from '@/hooks/useBusinesses';
 import { useReviewsByBusiness, useCreateReview } from '@/hooks/useReviews';
 import { useQuestionsByBusiness, useCreateQuestion } from '@/hooks/useQuestions';
 import { useAuth } from '@/contexts/AuthContext';
-import { getStorageUrl } from '@/lib/supabase-helpers';
+import { getStorageUrl, getSpecialHoursForDate } from '@/lib/supabase-helpers';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { Phone, MessageCircle, MapPin, Share2, ChevronRight, Clock, Mail, Globe, Instagram, CheckCircle2, Star, Send, Heart, Award, Code2 } from 'lucide-react';
@@ -48,6 +48,10 @@ const badgeTextColors: Record<string, string> = {
 
 const BusinessPage = () => {
   const { businessId } = useParams();
+  const searchParams = new URLSearchParams(window.location.search);
+  const initialTab = searchParams.get('tab') || 'about';
+  const [activeTab, setActiveTab] = useState(initialTab);
+  
   const { data: business, isLoading } = useBusinessById(businessId || '');
   const { data: reviews } = useReviewsByBusiness(businessId || '');
   const { data: questions } = useQuestionsByBusiness(businessId || '');
@@ -63,7 +67,7 @@ const BusinessPage = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('feed_posts')
-        .select('*, businesses(id, trade_name, verified, cover_photo, hours, whatsapp)')
+        .select('*, businesses(id, trade_name, verified, cover_photo, hours, special_hours, whatsapp)')
         .eq('business_id', businessId!)
         .eq('active', true)
         .order('created_at', { ascending: false });
@@ -135,6 +139,8 @@ const BusinessPage = () => {
 
   const coverUrl = getStorageUrl(business.cover_photo);
   const hours = business.hours as any;
+  const todaySpecialHours = getSpecialHoursForDate((business as any).special_hours);
+  const todayDayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date().getDay()];
   const photos = (business.photos || []).map((p: string) => getStorageUrl(p)).filter(Boolean);
 
   return (
@@ -181,7 +187,7 @@ const BusinessPage = () => {
               </div>
               {business.subcategories && <span className="text-sm text-muted-foreground">{(business.subcategories as any).name}</span>}
             </div>
-            <StatusBadge hours={hours} />
+            <StatusBadge hours={hours} specialHours={(business as any).special_hours} />
           </div>
 
           <div className="flex items-center gap-3 mb-4">
@@ -224,7 +230,7 @@ const BusinessPage = () => {
         </motion.div>
 
         {/* Tabs */}
-        <Tabs defaultValue="about" className="mt-2">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-2">
           <TabsList className="w-full justify-start bg-muted rounded-xl p-1 overflow-x-auto">
             <TabsTrigger value="about" className="rounded-lg">Sobre</TabsTrigger>
             <TabsTrigger value="posts" className="rounded-lg">Promoções ({businessPosts?.length || 0})</TabsTrigger>
@@ -243,15 +249,37 @@ const BusinessPage = () => {
               <h3 className="font-display font-semibold text-foreground mb-3 flex items-center gap-2">
                 <Clock size={16} /> Horário de Funcionamento
               </h3>
+              {todaySpecialHours && (
+                <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 mb-4">
+                  <p className="text-sm font-semibold text-primary">Horário especial hoje</p>
+                  <p className="text-sm text-foreground mt-1">
+                    {todaySpecialHours.closed
+                      ? 'Fechado em horário especial'
+                      : `${todaySpecialHours.open} - ${todaySpecialHours.close}`}
+                  </p>
+                  {todaySpecialHours.reason && (
+                    <p className="text-xs text-muted-foreground mt-1">Motivo: {todaySpecialHours.reason}</p>
+                  )}
+                </div>
+              )}
               <div className="space-y-2">
-                {hours && Object.entries(hours).map(([day, h]: [string, any]) => (
-                  <div key={day} className="flex justify-between text-sm py-1.5 border-b border-border/50 last:border-0">
-                    <span className="text-foreground font-medium">{dayLabels[day] || day}</span>
-                    <span className={h.closed ? 'text-status-closed' : 'text-muted-foreground'}>
-                      {h.closed ? 'Fechado' : `${h.open} - ${h.close}`}
-                    </span>
-                  </div>
-                ))}
+                {hours && Object.entries(hours).map(([day, h]: [string, any]) => {
+                  const isToday = day === todayDayName;
+                  const special = isToday ? todaySpecialHours : undefined;
+                  const displayClosed = special ? special.closed : h.closed;
+                  const displayText = special
+                    ? (special.closed ? 'Fechado (especial)' : `${special.open} - ${special.close} (especial)`)
+                    : (h.closed ? 'Fechado' : `${h.open} - ${h.close}`);
+
+                  return (
+                    <div key={day} className="flex justify-between text-sm py-1.5 border-b border-border/50 last:border-0">
+                      <span className="text-foreground font-medium">{dayLabels[day] || day}</span>
+                      <span className={displayClosed ? 'text-status-closed' : 'text-muted-foreground'}>
+                        {displayText}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

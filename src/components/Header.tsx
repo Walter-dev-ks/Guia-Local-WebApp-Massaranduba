@@ -27,9 +27,9 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border">
-      <div className="container max-w-3xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
+      <div className="container max-w-3xl mx-auto px-4 py-2 flex flex-wrap items-center justify-between gap-2">
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           {/* BOTÃO DE VOLTAR: Aparece apenas se não estiver na Home */}
           {isNotHome && (
             <Button 
@@ -52,7 +52,7 @@ export function Header() {
           </Link>
         </div>
 
-        <form onSubmit={handleSearch} className="hidden sm:flex flex-1 max-w-md">
+        <form onSubmit={handleSearch} className="hidden sm:flex flex-1 min-w-0 max-w-md">
           <div className="relative w-full">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -64,7 +64,7 @@ export function Header() {
           </div>
         </form>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-wrap justify-end min-w-0">
           <NotificationBell />
           <ThemeToggle />
           <button

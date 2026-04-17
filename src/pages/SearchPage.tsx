@@ -18,7 +18,7 @@ const SearchPage = () => {
 
   // Filtrar apenas estabelecimentos abertos agora se o filtro estiver ativo
   const businesses = isOpenNowOnly && allBusinesses
-    ? allBusinesses.filter((biz: any) => isBusinessOpenFromHours(biz.hours))
+    ? allBusinesses.filter((biz: any) => isBusinessOpenFromHours(biz.hours, biz.special_hours))
     : allBusinesses;
 
   const isLoading = loadingBiz || loadingCat || loadingSub;

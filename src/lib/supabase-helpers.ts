@@ -1,17 +1,77 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { WeeklyHours } from '@/types';
 
-export function isBusinessOpenFromHours(hours: WeeklyHours): boolean {
+export interface SpecialHours {
+  [date: string]: {
+    open: string;
+    close: string;
+    closed: boolean;
+    reason?: string;
+  };
+}
+
+export interface BusinessHoursWithSpecial {
+  hours: WeeklyHours;
+  special_hours?: SpecialHours;
+}
+
+export function isBusinessOpenFromHours(hours: WeeklyHours, specialHours?: SpecialHours): boolean {
   const now = new Date();
+  const today = formatDateForSpecialHours(now);
+  
+  // Check if today has special hours
+  if (specialHours && specialHours[today]) {
+    const specialDay = specialHours[today];
+    return !specialDay.closed && isTimeInRange(now, specialDay.open, specialDay.close);
+  }
+  
+  // Use regular weekly hours
   const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
-  const today = days[now.getDay()];
-  const todayHours = hours[today];
+  const dayName = days[now.getDay()];
+  const todayHours = hours[dayName];
 
   if (todayHours.closed) return false;
 
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
-  const [openH, openM] = todayHours.open.split(':').map(Number);
-  const [closeH, closeM] = todayHours.close.split(':').map(Number);
+  return isTimeInRange(now, todayHours.open, todayHours.close);
+}
+
+export function getBusinessStatusText(hours: WeeklyHours, specialHours?: SpecialHours): string {
+  const now = new Date();
+  const today = formatDateForSpecialHours(now);
+  const hasSpecialHours = specialHours && specialHours[today];
+  
+  if (hasSpecialHours) {
+    const specialDay = specialHours[today];
+    if (specialDay.closed) {
+      return 'Fechado em horário especial';
+    }
+    return 'Aberto em horário especial';
+  }
+  
+  const isOpen = isBusinessOpenFromHours(hours, specialHours);
+  return isOpen ? 'Aberto' : 'Fechado';
+}
+
+export function getSpecialHoursForDate(specialHours?: SpecialHours, date: Date = new Date()) {
+  if (!specialHours) return undefined;
+
+  const today = formatDateForSpecialHours(date);
+  return specialHours[today];
+}
+
+export function getSpecialHourReason(specialHours?: SpecialHours): string | undefined {
+  if (!specialHours) return undefined;
+  
+  const now = new Date();
+  const today = formatDateForSpecialHours(now);
+  
+  return specialHours[today]?.reason;
+}
+
+function isTimeInRange(date: Date, openTime: string, closeTime: string): boolean {
+  const currentMinutes = date.getHours() * 60 + date.getMinutes();
+  const [openH, openM] = openTime.split(':').map(Number);
+  const [closeH, closeM] = closeTime.split(':').map(Number);
   const openMinutes = openH * 60 + openM;
   const closeMinutes = closeH * 60 + closeM;
 
@@ -19,6 +79,13 @@ export function isBusinessOpenFromHours(hours: WeeklyHours): boolean {
     return currentMinutes >= openMinutes || currentMinutes < closeMinutes;
   }
   return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
+}
+
+function formatDateForSpecialHours(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export function getStorageUrl(path: string | null | undefined): string {

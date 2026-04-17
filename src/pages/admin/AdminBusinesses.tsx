@@ -12,6 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Pencil, Trash2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCategories } from '@/hooks/useCategories';
+import { SpecialHoursManager } from '@/components/SpecialHoursManager';
+import type { SpecialHours } from '@/lib/supabase-helpers';
 
 const defaultHours = {
   monday: { open: '08:00', close: '18:00', closed: false },
@@ -39,6 +41,7 @@ export default function AdminBusinesses() {
     category_id: '', subcategory_id: '', phone: '', whatsapp: '',
     email: '', website: '', instagram: '', address: '', city: '',
     state: '', zip_code: '', cover_photo: '', hours: defaultHours as any,
+    special_hours: {} as SpecialHours,
   });
 
   const { data: businesses, isLoading } = useQuery({
@@ -89,6 +92,7 @@ export default function AdminBusinesses() {
       category_id: '', subcategory_id: '', phone: '', whatsapp: '',
       email: '', website: '', instagram: '', address: '', city: '',
       state: '', zip_code: '', cover_photo: '', hours: defaultHours,
+      special_hours: {},
     });
     setEditing(null);
   };
@@ -101,7 +105,9 @@ export default function AdminBusinesses() {
       subcategory_id: biz.subcategory_id || '', phone: biz.phone || '',
       whatsapp: biz.whatsapp || '', email: biz.email || '', website: biz.website || '',
       instagram: biz.instagram || '', address: biz.address || '', city: biz.city || '',
-      state: biz.state || '', zip_code: biz.zip_code || '', cover_photo: biz.cover_photo || '', hours: biz.hours || defaultHours,
+      state: biz.state || '', zip_code: biz.zip_code || '', cover_photo: biz.cover_photo || '', 
+      hours: biz.hours || defaultHours,
+      special_hours: biz.special_hours || {},
     });
     setOpen(true);
   };
@@ -133,7 +139,7 @@ export default function AdminBusinesses() {
           <DialogTrigger asChild>
             <Button className="gap-1.5"><Plus size={16} /> Nova Empresa</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editing ? 'Editar Empresa' : 'Nova Empresa'}</DialogTitle>
             </DialogHeader>
@@ -250,6 +256,12 @@ export default function AdminBusinesses() {
                 </div>
               </div>
 
+              {/* Special Hours */}
+              <SpecialHoursManager 
+                specialHours={form.special_hours} 
+                onChange={(specialHours) => setForm(p => ({ ...p, special_hours: specialHours }))}
+              />
+
               <Button type="submit" className="w-full" disabled={saveMutation.isPending}>
                 {saveMutation.isPending ? 'Salvando...' : editing ? 'Atualizar' : 'Cadastrar'}
               </Button>
@@ -265,35 +277,41 @@ export default function AdminBusinesses() {
               <TableHead>Nome</TableHead>
               <TableHead>Categoria</TableHead>
               <TableHead>Telefone</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-24">Ações</TableHead>
+              <TableHead>Cidade</TableHead>
+              <TableHead>Verificado</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
-            ) : !businesses?.length ? (
-              <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhuma empresa cadastrada.</TableCell></TableRow>
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  Carregando...
+                </TableCell>
+              </TableRow>
+            ) : businesses?.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  Nenhuma empresa cadastrada
+                </TableCell>
+              </TableRow>
             ) : (
-              businesses.map((biz: any) => (
+              businesses?.map((biz: any) => (
                 <TableRow key={biz.id}>
+                  <TableCell className="font-medium">{biz.trade_name}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{biz.categories?.name}</TableCell>
+                  <TableCell className="text-sm">{biz.phone}</TableCell>
+                  <TableCell className="text-sm">{biz.city}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-foreground">{biz.trade_name}</span>
-                      {biz.verified && <CheckCircle2 size={14} className="text-accent" />}
-                    </div>
-                    <span className="text-xs text-muted-foreground">{biz.cnpj}</span>
+                    {biz.verified && <CheckCircle2 size={16} className="text-accent" />}
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{(biz.categories as any)?.name}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{biz.phone}</TableCell>
-                  <TableCell>
-                    <Badge variant={biz.active ? 'default' : 'secondary'}>{biz.active ? 'Ativo' : 'Inativo'}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button size="icon" variant="ghost" onClick={() => openEdit(biz)}><Pencil size={14} /></Button>
-                      <Button size="icon" variant="ghost" className="text-destructive" onClick={() => { if (confirm('Remover empresa?')) deleteMutation.mutate(biz.id); }}><Trash2 size={14} /></Button>
-                    </div>
+                  <TableCell className="text-right space-x-2">
+                    <Button size="sm" variant="outline" onClick={() => openEdit(biz)}>
+                      <Pencil size={14} />
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={() => deleteMutation.mutate(biz.id)}>
+                      <Trash2 size={14} />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))

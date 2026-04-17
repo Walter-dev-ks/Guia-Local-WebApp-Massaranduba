@@ -44,7 +44,7 @@ export function BusinessCard({ business, index = 0 }: BusinessCardProps) {
                   <span className="text-xs text-muted-foreground">{business.subcategories.name}</span>
                 )}
               </div>
-              <StatusBadge hours={business.hours} size="sm" />
+              <StatusBadge hours={business.hours} specialHours={business.special_hours} size="sm" />
             </div>
 
             <StarRating rating={Number(business.rating) || 0} count={business.review_count} size="sm" />

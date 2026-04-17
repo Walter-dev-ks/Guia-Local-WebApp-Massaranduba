@@ -34,19 +34,15 @@ export function useBusinessById(id: string) {
 
 export function useBusinessesByCategory(categorySlug: string) {
   return useQuery({
-      if (searchTerm) {
-        // Criamos uma busca que tenta encontrar o termo no Nome OU na Descrição
-        // O ilike com % antes e depois já ajuda muito na correspondência parcial
-        query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
-      } else {
-        // Filtros normais por ID
-        if (category) {
-          query = query.eq('category_id', category);
-        }
-        if (subcategory) {
-          query = query.eq('subcategory_id', subcategory);
-        }
-      }
+    queryKey: ['businesses', 'category', categorySlug],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('businesses')
+        .select('*, categories(name, slug, icon), subcategories(name, slug)')
+        .eq('categories.slug', categorySlug)
+        .eq('active', true)
+        .order('trade_name');
+      if (error) throw error;
       return data;
     },
     enabled: !!categorySlug,
