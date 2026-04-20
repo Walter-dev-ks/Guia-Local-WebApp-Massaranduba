@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Header } from '@/components/Header';
@@ -15,6 +15,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [emailCooldown, setEmailCooldown] = useState(0);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,8 +30,44 @@ const LoginPage = () => {
     setLoading(false);
   };
 
+  const handlePasswordReset = async () => {
+    if (!email) {
+      toast.error('Digite seu e-mail para redefinir a senha.');
+      return;
+    }
+
+    if (emailCooldown > 0) {
+      toast.error('Aguarde um momento antes de tentar novamente.');
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/redefinir-senha`,
+    });
+
+    if (error) {
+      toast.error(
+        error.message.includes('rate limit')
+          ? 'Muitas solicitações. Aguarde alguns minutos e tente novamente.'
+          : error.message
+      );
+      setEmailCooldown(60);
+    } else {
+      toast.success('E-mail de redefinição enviado! Verifique sua caixa de entrada.');
+      setEmailCooldown(60);
+    }
+    setLoading(false);
+  };
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (emailCooldown > 0) {
+      toast.error('Aguarde um momento antes de tentar novamente.');
+      return;
+    }
+
     setLoading(true);
     const { error } = await supabase.auth.signUp({
       email,
@@ -41,9 +78,15 @@ const LoginPage = () => {
       },
     });
     if (error) {
-      toast.error(error.message);
+      toast.error(
+        error.message.includes('rate limit')
+          ? 'Muitas solicitações. Aguarde alguns minutos e tente novamente.'
+          : error.message
+      );
+      setEmailCooldown(60);
     } else {
       toast.success('Conta criada! Verifique seu e-mail para confirmar.');
+      setEmailCooldown(60);
     }
     setLoading(false);
   };
@@ -55,6 +98,22 @@ const LoginPage = () => {
     });
     if (error) toast.error(error.message);
   };
+
+  useEffect(() => {
+    if (!emailCooldown) return;
+
+    const timer = window.setInterval(() => {
+      setEmailCooldown(prev => {
+        if (prev <= 1) {
+          window.clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [emailCooldown]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -103,6 +162,20 @@ const LoginPage = () => {
                 <Mail size={16} />
                 {loading ? 'Entrando...' : 'Entrar'}
               </Button>
+              <div className="flex flex-col gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-sm text-muted-foreground hover:text-foreground justify-start"
+                disabled={loading || emailCooldown > 0}
+                onClick={handlePasswordReset}
+              >
+                Esqueci minha senha
+              </Button>
+              {emailCooldown > 0 && (
+                <p className="text-xs text-muted-foreground">Aguarde {emailCooldown}s antes de tentar novamente.</p>
+              )}
+            </div>
             </form>
           </TabsContent>
 
@@ -120,10 +193,13 @@ const LoginPage = () => {
                 <Label htmlFor="signup-password">Senha</Label>
                 <Input id="signup-password" type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
               </div>
-              <Button type="submit" className="w-full gap-2" disabled={loading}>
+              <Button type="submit" className="w-full gap-2" disabled={loading || emailCooldown > 0}>
                 <Mail size={16} />
                 {loading ? 'Criando...' : 'Criar Conta'}
               </Button>
+              {emailCooldown > 0 && (
+                <p className="text-xs text-muted-foreground">Aguarde {emailCooldown}s antes de tentar novamente.</p>
+              )}
             </form>
           </TabsContent>
         </Tabs>

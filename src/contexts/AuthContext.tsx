@@ -50,8 +50,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
+    let shouldUnmount = false;
+
+    const handleRedirectSession = async () => {
+      try {
+        const url = window.location.href;
+        if (
+          url.includes('access_token') ||
+          url.includes('refresh_token') ||
+          url.includes('type=recovery') ||
+          url.includes('error=')
+        ) {
+          await supabase.auth.getSessionFromUrl({ storeSession: true });
+          const cleanUrl = window.location.origin + window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
+        }
+      } catch (error) {
+        console.error('Erro ao processar o callback do Supabase:', error);
+      }
+    };
+
+    const initAuth = async () => {
+      await handleRedirectSession();
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (shouldUnmount) return;
+
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        await ensureProfileExists(session.user);
+        const { data } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', session.user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+        if (!shouldUnmount) setIsAdmin(!!data);
+      } else {
+        if (!shouldUnmount) setIsAdmin(false);
+      }
+      if (!shouldUnmount) setLoading(false);
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (shouldUnmount) return;
         setSession(session);
         setUser(session?.user ?? null);
 
@@ -71,23 +115,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await ensureProfileExists(session.user);
-        supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .eq('role', 'admin')
-          .maybeSingle()
-          .then(({ data }) => setIsAdmin(!!data));
-      }
-      setLoading(false);
-    });
+    initAuth();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      shouldUnmount = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {

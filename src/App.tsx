@@ -12,6 +12,7 @@ import BusinessPage from "./pages/BusinessPage";
 import CategoryPage from "./pages/CategoryPage";
 import SearchPage from "./pages/SearchPage";
 import LoginPage from "./pages/LoginPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import FavoritesPage from "./pages/FavoritesPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminBusinesses from "./pages/admin/AdminBusinesses";
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/categoria/:categoryId/:subcategoryId" element={<CategoryPage />} />
             <Route path="/busca" element={<SearchPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/redefinir-senha/*" element={<ResetPasswordPage />} />
             <Route path="/favoritos" element={<FavoritesPage />} />
 
             {/* Admin routes */}

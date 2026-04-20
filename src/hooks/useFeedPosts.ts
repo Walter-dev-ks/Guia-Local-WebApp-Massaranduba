@@ -8,7 +8,7 @@ export function useFeedPosts() {
   const { data: favoriteIds } = useFavorites();
 
   return useQuery({
-    queryKey: ['feed_posts', favoriteIds],
+    queryKey: ['feed_posts', user?.id, favoriteIds?.length], // Use length instead of full array to avoid re-renders
     queryFn: async () => {
       const now = new Date().toISOString();
       const { data, error } = await supabase

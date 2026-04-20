@@ -8,13 +8,16 @@ import { useFeedPosts } from '@/hooks/useFeedPosts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 
 const Index = () => {
   const [currentFilter, setCurrentFilter] = useState<FeedFilterType>('all');
-  const { data: rawFeedPosts, isLoading } = useFeedPosts();
+  const { data: rawFeedPosts, isLoading, refetch } = useFeedPosts();
+  const queryClient = useQueryClient();
 
-  const handleRefresh = () => {
-    window.location.reload();
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['feed_posts'] });
+    await refetch();
   };
 
   const processedFeed = useMemo(() => {
