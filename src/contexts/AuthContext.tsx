@@ -53,6 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let shouldUnmount = false;
 
     const handleRedirectSession = async () => {
+      // O Supabase v2 processa tokens automaticamente no onAuthStateChange ou getSession.
+      // Não é mais necessário chamar getSessionFromUrl.
       try {
         const url = window.location.href;
         if (
@@ -61,14 +63,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           url.includes('type=recovery') ||
           url.includes('error=')
         ) {
-          await supabase.auth.getSessionFromUrl({ storeSession: true });
+          // Apenas limpamos a URL após o Supabase processar internamente
           const cleanUrl = window.location.origin + window.location.pathname;
           window.history.replaceState({}, document.title, cleanUrl);
         }
       } catch (error) {
-        console.error('Erro ao processar o callback do Supabase:', error);
+        console.error('Erro ao limpar URL após callback:', error);
       }
     };
+
 
     const initAuth = async () => {
       await handleRedirectSession();
