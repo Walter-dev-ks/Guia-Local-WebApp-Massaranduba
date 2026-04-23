@@ -17,45 +17,44 @@ const ResetPasswordPage = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // O Supabase envia erros e tokens no fragmento (#) da URL
-    const hashParams = new URLSearchParams(location.hash.substring(1));
-    const searchParams = new URLSearchParams(location.search);
-    
-    // Tenta pegar o erro tanto do fragmento (#) quanto da query string (?)
-    const error = hashParams.get('error') || searchParams.get('error');
-    const description = hashParams.get('error_description') || searchParams.get('error_description');
+    const handleAuthEvents = async () => {
+      // 1. Verificar se há erros na URL (fragmento ou query)
+      const hashParams = new URLSearchParams(location.hash.substring(1));
+      const searchParams = new URLSearchParams(location.search);
+      
+      const error = hashParams.get('error') || searchParams.get('error');
+      const description = hashParams.get('error_description') || searchParams.get('error_description');
 
-    if (error) {
-      toast.error(description ?? 'Link inválido ou expirado.');
-      setIsLoading(false);
-      setTimeout(() => navigate('/login'), 2000);
-      return;
-    }
-    
-    // ... restante do código (checkToken, etc)
+      if (error) {
+        toast.error(description ?? 'Link inválido ou expirado.');
+        setIsLoading(false);
+        setTimeout(() => navigate('/login'), 3000);
+        return;
+      }
 
+      // 2. Aguardar um pequeno delay (1 segundo)
+      // Isso evita o erro de "lock released" (race condition) no console
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-    const checkToken = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
-        // Se não houver sessão, significa que o token expirou ou é inválido
-        if (!session) {
-          toast.error('Link expirado ou inválido. Solicite um novo e-mail.');
-          setTimeout(() => navigate('/login'), 2000);
+        if (sessionError || !session) {
+          toast.error('Sessão de redefinição não encontrada ou expirada.');
+          setTimeout(() => navigate('/login'), 3000);
           return;
         }
         
         setIsLoading(false);
-      } catch (error) {
-        console.error('Erro ao verificar token:', error);
-        toast.error('Erro ao verificar o link.');
-        setTimeout(() => navigate('/login'), 2000);
+      } catch (err) {
+        console.error('Erro ao verificar sessão:', err);
+        toast.error('Erro ao validar o link de acesso.');
+        setTimeout(() => navigate('/login'), 3000);
       }
     };
 
-    checkToken();
-  }, [navigate]);
+    handleAuthEvents();
+  }, [location, navigate]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,13 +81,10 @@ const ResetPasswordPage = () => {
       }
 
       toast.success('Senha redefinida com sucesso!');
-      
-      // Fazer logout e redirecionar para login
       await supabase.auth.signOut();
-      setTimeout(() => navigate('/login'), 1500);
+      setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
-      console.error('Erro ao redefinir senha:', err);
-      toast.error('Erro ao redefinir senha. Tente novamente.');
+      toast.error('Erro inesperado. Tente solicitar um novo e-mail.');
       setLoading(false);
     }
   };
@@ -97,7 +93,8 @@ const ResetPasswordPage = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground">Verificando link...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Validando seu acesso...</p>
         </div>
       </div>
     );
@@ -109,7 +106,7 @@ const ResetPasswordPage = () => {
       <main className="container max-w-md mx-auto px-4 py-12">
         <div className="text-center mb-8">
           <h1 className="font-display text-2xl font-bold text-foreground">Redefinir Senha</h1>
-          <p className="text-sm text-muted-foreground mt-1">Digite sua nova senha</p>
+          <p className="text-sm text-muted-foreground mt-1">Digite sua nova senha abaixo</p>
         </div>
 
         <form onSubmit={handleResetPassword} className="space-y-4">
@@ -144,18 +141,6 @@ const ResetPasswordPage = () => {
             {loading ? 'Atualizando...' : 'Redefinir Senha'}
           </Button>
         </form>
-
-        <div className="mt-6 text-center">
-          <Button
-            type="button"
-            variant="ghost"
-            className="text-sm text-muted-foreground"
-            onClick={() => navigate('/login')}
-            disabled={loading}
-          >
-            Voltar para o Login
-          </Button>
-        </div>
       </main>
     </div>
   );
