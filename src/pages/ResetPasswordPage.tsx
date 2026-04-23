@@ -16,9 +16,8 @@ const ResetPasswordPage = () => {
   const [loading, setLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
+    useEffect(() => {
     const handleAuthEvents = async () => {
-      // 1. Verificar se há erros na URL (fragmento ou query)
       const hashParams = new URLSearchParams(location.hash.substring(1));
       const searchParams = new URLSearchParams(location.search);
       
@@ -32,29 +31,35 @@ const ResetPasswordPage = () => {
         return;
       }
 
-      // 2. Aguardar um pequeno delay (1 segundo)
-      // Isso evita o erro de "lock released" (race condition) no console
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Aguarda 2 segundos para garantir que o Supabase processou o token
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (sessionError || !session) {
-          toast.error('Sessão de redefinição não encontrada ou expirada.');
-          setTimeout(() => navigate('/login'), 3000);
-          return;
+        if (!session) {
+          // Se ainda não tem sessão, pode ser que o token ainda esteja sendo processado
+          // Vamos tentar uma última vez após mais 1 segundo
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          const { data: { session: retrySession } } = await supabase.auth.getSession();
+          
+          if (!retrySession) {
+            toast.error('Sessão não encontrada. Tente solicitar um novo e-mail.');
+            setTimeout(() => navigate('/login'), 3000);
+            return;
+          }
         }
         
         setIsLoading(false);
       } catch (err) {
-        console.error('Erro ao verificar sessão:', err);
-        toast.error('Erro ao validar o link de acesso.');
+        toast.error('Erro ao validar o link.');
         setTimeout(() => navigate('/login'), 3000);
       }
     };
 
     handleAuthEvents();
   }, [location, navigate]);
+
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
