@@ -17,9 +17,13 @@ const ResetPasswordPage = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const error = params.get('error');
-    const description = params.get('error_description');
+    // O Supabase envia erros e tokens no fragmento (#) da URL
+    const hashParams = new URLSearchParams(location.hash.substring(1));
+    const searchParams = new URLSearchParams(location.search);
+    
+    // Tenta pegar o erro tanto do fragmento (#) quanto da query string (?)
+    const error = hashParams.get('error') || searchParams.get('error');
+    const description = hashParams.get('error_description') || searchParams.get('error_description');
 
     if (error) {
       toast.error(description ?? 'Link inválido ou expirado.');
@@ -27,6 +31,9 @@ const ResetPasswordPage = () => {
       setTimeout(() => navigate('/login'), 2000);
       return;
     }
+    
+    // ... restante do código (checkToken, etc)
+
 
     const checkToken = async () => {
       try {
