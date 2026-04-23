@@ -52,18 +52,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let shouldUnmount = false;
 
-    const handleRedirectSession = async () => {
-      // O Supabase v2 processa tokens automaticamente no onAuthStateChange ou getSession.
-      // Não é mais necessário chamar getSessionFromUrl.
+        const handleRedirectSession = async () => {
       try {
         const url = window.location.href;
+        // Se estivermos na página de redefinição, NÃO limpamos a URL agora,
+        // deixamos a própria página ResetPasswordPage cuidar disso.
+        if (window.location.pathname.includes('redefinir-senha')) {
+          return;
+        }
+
         if (
           url.includes('access_token') ||
           url.includes('refresh_token') ||
           url.includes('type=recovery') ||
           url.includes('error=')
         ) {
-          // Apenas limpamos a URL após o Supabase processar internamente
           const cleanUrl = window.location.origin + window.location.pathname;
           window.history.replaceState({}, document.title, cleanUrl);
         }
@@ -71,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('Erro ao limpar URL após callback:', error);
       }
     };
+
 
 
     const initAuth = async () => {
