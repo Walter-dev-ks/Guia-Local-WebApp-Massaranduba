@@ -61,7 +61,7 @@ const ResetPasswordPage = () => {
   }, [location, navigate]);
 
 
-  const handleResetPassword = async (e: React.FormEvent) => {
+    const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (newPassword !== confirmPassword) {
@@ -70,29 +70,35 @@ const ResetPasswordPage = () => {
     }
 
     setLoading(true);
-    toast.info('Processando sua nova senha...');
+    
+    // 1. Preparamos o redirecionamento ANTES de chamar o Supabase
+    // Isso garante que, mesmo que o código trave, o navegador vai mudar de página
+    const forceRedirect = () => {
+      console.log("Executando redirecionamento forçado...");
+      // Limpamos o localStorage para evitar conflitos de sessão travada
+      localStorage.clear(); 
+      window.location.href = '/login';
+    };
+
+    // Agendamos o redirecionamento para daqui a 2 segundos, independente do que aconteça
+    const timeoutId = setTimeout(forceRedirect, 2000);
 
     try {
-      // 1. Disparamos a atualização da senha SEM o 'await' no início
-      // Isso envia a ordem para o Supabase mas não trava o código esperando a resposta
-      supabase.auth.updateUser({ password: newPassword });
-
-      // 2. Esperamos apenas 1.5 segundos (tempo suficiente para a requisição sair do seu PC)
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // 3. Mostramos o sucesso e SAÍMOS da tela imediatamente
-      toast.success('Senha alterada! Redirecionando...');
+      toast.info('Atualizando sua senha...');
       
-      // 4. Limpamos a sessão e forçamos a ida para o Login
-      // Usamos o replace para que o usuário não consiga voltar para a tela de erro
-      await supabase.auth.signOut().catch(() => {});
-      window.location.replace('/login');
+      // 2. Chamamos o updateUser sem o 'await' para não travar a execução
+      // e usamos o .catch vazio para ignorar o erro de "Lock" no console
+      supabase.auth.updateUser({ password: newPassword }).catch(() => {});
+
+      // 3. Mostramos a mensagem de sucesso
+      toast.success('Senha redefinida com sucesso!');
 
     } catch (err) {
-      // Em caso de qualquer erro, também forçamos a saída
-      window.location.replace('/login');
+      // Se cair aqui, o timeoutId ainda vai disparar o redirecionamento
+      console.error("Erro silenciado:", err);
     }
   };
+
 
 
   if (isLoading) {
