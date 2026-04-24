@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Mail, Chrome } from 'lucide-react';
+import { Mail } from 'lucide-react';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -91,14 +91,6 @@ const LoginPage = () => {
     setLoading(false);
   };
 
-  const handleGoogleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin },
-    });
-    if (error) toast.error(error.message);
-  };
-
   useEffect(() => {
     if (!emailCooldown) return;
 
@@ -122,24 +114,6 @@ const LoginPage = () => {
         <div className="text-center mb-8">
           <h1 className="font-display text-2xl font-bold text-foreground">Bem-vindo ao Guia Local</h1>
           <p className="text-sm text-muted-foreground mt-1">Entre ou crie sua conta para interagir</p>
-        </div>
-
-        <Button
-          variant="outline"
-          className="w-full gap-2 mb-6 h-11"
-          onClick={handleGoogleLogin}
-        >
-          <Chrome size={18} />
-          Entrar com Google
-        </Button>
-
-        <div className="relative mb-6">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-border" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">ou com e-mail</span>
-          </div>
         </div>
 
         <Tabs defaultValue="login">
