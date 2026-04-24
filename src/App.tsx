@@ -22,6 +22,8 @@ import AdminCRM from "./pages/admin/AdminCRM";
 import AdminModeration from "./pages/admin/AdminModeration";
 import AdminUsers from "./pages/admin/AdminUsers";
 import NotFound from "./pages/NotFound";
+import WhatsAppButton from "@/components/WhatsAppButton";
+
 
 const queryClient = new QueryClient();
 
@@ -32,6 +34,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <WhatsAppButton />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
