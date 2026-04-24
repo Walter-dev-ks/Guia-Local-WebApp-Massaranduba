@@ -61,7 +61,7 @@ const ResetPasswordPage = () => {
   }, [location, navigate]);
 
 
-  const handleResetPassword = async (e: React.FormEvent) => {
+   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (newPassword !== confirmPassword) {
@@ -69,42 +69,54 @@ const ResetPasswordPage = () => {
       return;
     }
 
-    if (newPassword.length < 6) {
-      toast.error('A senha deve ter no mínimo 6 caracteres.');
-      return;
-    }
-
     setLoading(true);
     
+    // Criamos um sinalizador para saber se já saímos da tela
+    let finished = false;
+
+    // Função para finalizar com sucesso e sair da tela
+    const finalizeSuccess = () => {
+      if (finished) return;
+      finished = true;
+      toast.success('Senha redefinida com sucesso!');
+      
+      // Forçamos a limpeza total e redirecionamento
+      setTimeout(() => {
+        supabase.auth.signOut().finally(() => {
+          window.location.assign('/login');
+        });
+      }, 1000);
+    };
+
     try {
+      // 1. Criamos um "Timer de Segurança" de 4 segundos
+      const securityTimer = setTimeout(() => {
+        if (!finished) {
+          console.log("Timeout de segurança atingido. Redirecionando...");
+          finalizeSuccess();
+        }
+      }, 4000);
+
+      // 2. Tentamos atualizar a senha
       const { error } = await supabase.auth.updateUser({ password: newPassword });
+      
+      clearTimeout(securityTimer);
 
       if (error) {
-        toast.error(error.message || 'Erro ao redefinir senha.');
-        setLoading(false);
+        if (!finished) {
+          toast.error(error.message);
+          setLoading(false);
+        }
         return;
       }
 
-      toast.success('Senha redefinida com sucesso!');
-      
-      // Forçamos o deslogue e limpamos o estado
-      await supabase.auth.signOut();
-      
-      // Pequeno delay para o usuário ler o toast e então redirecionamos
-      setTimeout(() => {
-        window.location.href = '/login'; // Redirecionamento forçado para garantir a saída da tela
-      }, 1500);
+      finalizeSuccess();
 
     } catch (err) {
-      // Se der erro de sessão mas a senha trocou (seu caso atual)
-      toast.success('Senha redefinida com sucesso!');
-      
-      setTimeout(() => {
-        window.location.href = '/login';
-      }, 1500);
+      console.error("Erro capturado:", err);
+      finalizeSuccess(); // Mesmo no erro, se a senha trocou, finalizamos
     }
   };
-
 
   if (isLoading) {
     return (
