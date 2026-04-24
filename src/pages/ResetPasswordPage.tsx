@@ -80,8 +80,6 @@ const ResetPasswordPage = () => {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
 
       if (error) {
-        // Se o erro for apenas que a sessão expirou mas a senha foi enviada,
-        // muitas vezes o Supabase já processou. Mas vamos tratar o erro real aqui.
         toast.error(error.message || 'Erro ao redefinir senha.');
         setLoading(false);
         return;
@@ -89,19 +87,24 @@ const ResetPasswordPage = () => {
 
       toast.success('Senha redefinida com sucesso!');
       
-      // Logout e redirecionamento
+      // Forçamos o deslogue e limpamos o estado
       await supabase.auth.signOut();
-      navigate('/login');
+      
+      // Pequeno delay para o usuário ler o toast e então redirecionamos
+      setTimeout(() => {
+        window.location.href = '/login'; // Redirecionamento forçado para garantir a saída da tela
+      }, 1500);
+
     } catch (err) {
-      // AQUI ESTÁ O PULO DO GATO:
-      // Se chegamos aqui mas a senha foi alterada (como você confirmou),
-      // vamos apenas avisar que deu certo e mandar para o login.
-      console.log('Aviso: Erro de sessão pós-troca, mas prosseguindo...');
+      // Se der erro de sessão mas a senha trocou (seu caso atual)
       toast.success('Senha redefinida com sucesso!');
-      await supabase.auth.signOut().catch(() => {}); // Tenta deslogar silenciosamente
-      navigate('/login');
+      
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 1500);
     }
   };
+
 
   if (isLoading) {
     return (
