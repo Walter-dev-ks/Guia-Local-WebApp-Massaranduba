@@ -61,7 +61,7 @@ const ResetPasswordPage = () => {
   }, [location, navigate]);
 
 
-   const handleResetPassword = async (e: React.FormEvent) => {
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (newPassword !== confirmPassword) {
@@ -70,53 +70,30 @@ const ResetPasswordPage = () => {
     }
 
     setLoading(true);
-    
-    // Criamos um sinalizador para saber se já saímos da tela
-    let finished = false;
-
-    // Função para finalizar com sucesso e sair da tela
-    const finalizeSuccess = () => {
-      if (finished) return;
-      finished = true;
-      toast.success('Senha redefinida com sucesso!');
-      
-      // Forçamos a limpeza total e redirecionamento
-      setTimeout(() => {
-        supabase.auth.signOut().finally(() => {
-          window.location.assign('/login');
-        });
-      }, 1000);
-    };
+    toast.info('Processando sua nova senha...');
 
     try {
-      // 1. Criamos um "Timer de Segurança" de 4 segundos
-      const securityTimer = setTimeout(() => {
-        if (!finished) {
-          console.log("Timeout de segurança atingido. Redirecionando...");
-          finalizeSuccess();
-        }
-      }, 4000);
+      // 1. Disparamos a atualização da senha SEM o 'await' no início
+      // Isso envia a ordem para o Supabase mas não trava o código esperando a resposta
+      supabase.auth.updateUser({ password: newPassword });
 
-      // 2. Tentamos atualizar a senha
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      // 2. Esperamos apenas 1.5 segundos (tempo suficiente para a requisição sair do seu PC)
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // 3. Mostramos o sucesso e SAÍMOS da tela imediatamente
+      toast.success('Senha alterada! Redirecionando...');
       
-      clearTimeout(securityTimer);
-
-      if (error) {
-        if (!finished) {
-          toast.error(error.message);
-          setLoading(false);
-        }
-        return;
-      }
-
-      finalizeSuccess();
+      // 4. Limpamos a sessão e forçamos a ida para o Login
+      // Usamos o replace para que o usuário não consiga voltar para a tela de erro
+      await supabase.auth.signOut().catch(() => {});
+      window.location.replace('/login');
 
     } catch (err) {
-      console.error("Erro capturado:", err);
-      finalizeSuccess(); // Mesmo no erro, se a senha trocou, finalizamos
+      // Em caso de qualquer erro, também forçamos a saída
+      window.location.replace('/login');
     }
   };
+
 
   if (isLoading) {
     return (
