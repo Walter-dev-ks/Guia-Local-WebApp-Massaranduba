@@ -24,8 +24,12 @@ const Index = () => {
     if (!rawFeedPosts) return [];
 
     // 1. Separar patrocinados e posts normais
-    const sponsored = rawFeedPosts.filter(p => p.type === 'sponsored');
+  const sponsored = currentFilter === 'all'
+    ? rawFeedPosts.filter(p => p.type === 'sponsored')
+    : [];
+
     const organic = rawFeedPosts.filter(p => p.type !== 'sponsored');
+
 
     // 2. Filtrar os posts orgânicos se um filtro estiver ativo
     const filteredOrganic = currentFilter === 'all' 
