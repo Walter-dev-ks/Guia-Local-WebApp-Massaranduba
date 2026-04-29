@@ -103,7 +103,12 @@ export default function AdminFeed() {
     }));
   };
 
-  const typeLabels: Record<string, string> = { promotion: 'Promoção', announcement: 'Aviso', sponsored: 'Patrocinado' };
+  const typeLabels: Record<string, string> = {
+  promotion: 'Promoção',
+  announcement: 'Aviso',
+  sponsored: 'Patrocinado',
+  local_sale: 'Classificado',
+  };
 
   return (
     <div>
@@ -132,6 +137,7 @@ export default function AdminFeed() {
                   <SelectContent>
                     <SelectItem value="promotion">Promoção</SelectItem>
                     <SelectItem value="announcement">Aviso</SelectItem>
+                    <SelectItem value="local_sale">Classificado</SelectItem>
                     <SelectItem value="sponsored">Patrocinado</SelectItem>
                   </SelectContent>
                 </Select>
