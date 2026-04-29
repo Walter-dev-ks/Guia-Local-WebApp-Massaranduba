@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'; // Adicionado useEffect aqu
 import { Link, useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Megaphone, Tag, Star, CheckCircle2, MessageCircle, ThumbsUp, ThumbsDown, ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
+import { ArrowRight, Megaphone, Tag, Star, CheckCircle2, MessageCircle, ThumbsUp, ThumbsDown, ChevronLeft, ChevronRight, Image as ImageIcon, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getStorageUrl, isBusinessOpenFromHours, getBusinessStatusText, type SpecialHours } from '@/lib/supabase-helpers';
 import { StarRating } from '@/components/StarRating';
