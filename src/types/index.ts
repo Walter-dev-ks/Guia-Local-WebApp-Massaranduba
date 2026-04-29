@@ -63,7 +63,7 @@ export interface FeedPost {
   title: string;
   description: string;
   image: string;
-  type: 'promotion' | 'announcement' | 'sponsored';
+  type: 'promotion' | 'announcement' | 'sponsored' | 'local_sale';
   createdAt: string;
 }
 
