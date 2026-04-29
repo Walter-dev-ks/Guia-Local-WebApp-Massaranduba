@@ -40,5 +40,3 @@ export function FeedFilter({ currentFilter, onFilterChange }: FeedFilterProps) {
     </div>
   );
 }
-
-}
