@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
-import { Megaphone, Tag, LayoutGrid } from 'lucide-react';
+import { Megaphone, Tag, LayoutGrid, ShoppingBag } from 'lucide-react';
 
-export type FeedFilterType = 'all' | 'promotion' | 'announcement';
+export type FeedFilterType = 'all' | 'promotion' | 'announcement' | 'local_sale';
 
 interface FeedFilterProps {
   currentFilter: FeedFilterType;
@@ -13,6 +13,7 @@ export function FeedFilter({ currentFilter, onFilterChange }: FeedFilterProps) {
     { id: 'all', label: 'Tudo', icon: LayoutGrid },
     { id: 'promotion', label: 'Promoções', icon: Tag },
     { id: 'announcement', label: 'Avisos', icon: Megaphone },
+    { id: 'local_sale', label: 'Classificados', icon: ShoppingBag },
   ] as const;
 
   return (
@@ -20,7 +21,7 @@ export function FeedFilter({ currentFilter, onFilterChange }: FeedFilterProps) {
       {filters.map((filter) => {
         const Icon = filter.icon;
         const isActive = currentFilter === filter.id;
-        
+
         return (
           <Button
             key={filter.id}
@@ -38,4 +39,6 @@ export function FeedFilter({ currentFilter, onFilterChange }: FeedFilterProps) {
       })}
     </div>
   );
+}
+
 }
