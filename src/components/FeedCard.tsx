@@ -41,6 +41,12 @@ const typeConfig: Record<string, { label: string; icon: React.ElementType; class
   promotion: { label: 'Promoção', icon: Tag, className: 'bg-accent text-accent-foreground' },
   announcement: { label: 'Aviso', icon: Megaphone, className: 'bg-secondary text-secondary-foreground' },
   sponsored: { label: 'Patrocinado', icon: Star, className: 'bg-amber-500 text-white animate-pulse-slow shadow-sm' },
+  local_sale: {
+  label: 'Classificado',
+  icon: ShoppingBag,
+  className: 'bg-emerald-600 text-white',
+},
+
 };
 
 export function FeedCard({ post, index }: FeedCardProps) {
