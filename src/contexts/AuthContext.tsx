@@ -51,8 +51,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let shouldUnmount = false;
+    let authLoadId = 0;
+    let authChangeTimer: ReturnType<typeof setTimeout> | undefined;
 
-        const handleRedirectSession = async () => {
+    const handleRedirectSession = async () => {
       try {
         const url = window.location.href;
         // Se estivermos na página de redefinição, NÃO limpamos a URL agora,
@@ -77,48 +79,81 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
 
-    const initAuth = async () => {
-      await handleRedirectSession();
+    const loadSessionContext = async (nextSession: Session | null) => {
+      const currentLoadId = ++authLoadId;
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (shouldUnmount) return;
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
 
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await ensureProfileExists(session.user);
-        const { data } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', session.user.id)
-          .eq('role', 'admin')
-          .maybeSingle();
-        if (!shouldUnmount) setIsAdmin(!!data);
-      } else {
-        if (!shouldUnmount) setIsAdmin(false);
+      try {
+        if (nextSession?.user) {
+          await ensureProfileExists(nextSession.user);
+          const { data, error } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', nextSession.user.id)
+            .eq('role', 'admin')
+            .maybeSingle();
+
+          if (error) {
+            console.error('Erro ao verificar permissao de administrador:', error);
+          }
+
+          if (!shouldUnmount && currentLoadId === authLoadId) {
+            setIsAdmin(!!data);
+          }
+        } else if (!shouldUnmount && currentLoadId === authLoadId) {
+          setIsAdmin(false);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar contexto de autenticacao:', error);
+        if (!shouldUnmount && currentLoadId === authLoadId) {
+          setIsAdmin(false);
+        }
+      } finally {
+        if (!shouldUnmount && currentLoadId === authLoadId) {
+          setLoading(false);
+        }
       }
-      if (!shouldUnmount) setLoading(false);
+    };
+
+    const initAuth = async () => {
+      try {
+        await handleRedirectSession();
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (shouldUnmount) return;
+
+        await loadSessionContext(session);
+      } catch (error) {
+        console.error('Erro ao inicializar autenticacao:', error);
+        if (!shouldUnmount) {
+          setSession(null);
+          setUser(null);
+          setIsAdmin(false);
+          setLoading(false);
+        }
+      }
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         if (shouldUnmount) return;
         setSession(session);
         setUser(session?.user ?? null);
 
-        if (session?.user) {
-          await ensureProfileExists(session.user);
-          const { data } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', session.user.id)
-            .eq('role', 'admin')
-            .maybeSingle();
-          setIsAdmin(!!data);
-        } else {
+        if (!session?.user) {
           setIsAdmin(false);
+          setLoading(false);
+          return;
         }
-        setLoading(false);
+
+        // Evita deadlock conhecido do supabase-js: nao chame APIs assincronas
+        // diretamente dentro de onAuthStateChange.
+        if (authChangeTimer) clearTimeout(authChangeTimer);
+        authChangeTimer = setTimeout(() => {
+          void loadSessionContext(session);
+        }, 0);
       }
     );
 
@@ -126,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       shouldUnmount = true;
+      if (authChangeTimer) clearTimeout(authChangeTimer);
       subscription.unsubscribe();
     };
   }, []);
