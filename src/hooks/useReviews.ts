@@ -23,14 +23,18 @@ export function useReviewsByBusiness(businessId: string) {
           .select('id, full_name, avatar_url, reviewer_badge, review_count')
           .in('id', userIds);
         
-        // Fetch user roles to check for admin/developer status
-        const { data: roles } = await supabase
-          .from('user_roles')
-          .select('user_id, role')
-          .in('user_id', userIds);
+        // user_roles has RLS for direct reads, so use the security definer helper.
+        const rolesEntries = await Promise.all(
+          userIds.map(async (userId) => {
+            const { data } = await supabase.rpc('has_role', {
+              _user_id: userId,
+              _role: 'admin',
+            });
 
-        const rolesMap: Record<string, string> = {};
-        (roles || []).forEach((r: any) => { rolesMap[r.user_id] = r.role; });
+            return [userId, data ? 'admin' : 'user'] as const;
+          })
+        );
+        const rolesMap = Object.fromEntries(rolesEntries);
 
         (profiles || []).forEach((p: any) => { 
           profilesMap[p.id] = {

@@ -378,9 +378,9 @@ const BusinessPage = () => {
                   
                   return (
                   <div key={review.id} className={`bg-card rounded-xl p-4 border-2 ${borderClass}`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between mb-2">
+                      <div className="flex items-start gap-2 min-w-0 flex-wrap">
+                        <div className="w-8 h-8 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center shrink-0">
                           {review.profiles?.avatar_url ? (
                             <img src={review.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
                           ) : (
@@ -389,13 +389,13 @@ const BusinessPage = () => {
                             </span>
                           )}
                         </div>
-                        <span className="text-sm font-medium text-foreground">{review.profiles?.full_name || 'Usuário'}</span>
+                        <span className="text-sm font-medium text-foreground min-w-0 max-w-full break-words">{review.profiles?.full_name || 'Usuário'}</span>
                         <span className={`inline-flex items-center gap-1 text-xs font-medium ${badgeColor}`}>
-                          {isAdmin ? <Code2 size={12} /> : <Award size={12} />}
+                          {isAdmin ? <Code2 size={12} className="shrink-0" /> : <Award size={12} className="shrink-0" />}
                           {badge}
                         </span>
                       </div>
-                      <span className="text-xs text-muted-foreground">{new Date(review.created_at).toLocaleDateString('pt-BR')}</span>
+                      <span className="text-xs text-muted-foreground shrink-0 sm:text-right">{new Date(review.created_at).toLocaleDateString('pt-BR')}</span>
                     </div>
                     <StarRating rating={review.rating} size="sm" />
                     {review.comment && <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{review.comment}</p>}
